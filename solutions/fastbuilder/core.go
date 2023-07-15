@@ -93,6 +93,54 @@ func EnterWorkerThread(env *environment.PBEnvironment, breaker chan struct{}) {
 	})
 	getchecknum_everPassed := false
 	// currentChunkConstructor := &world_provider.ChunkConstructor{}
+
+	/*
+			{
+				go func() {
+					time.Sleep(time.Second * 5)
+					fmt.Println("STARTED")
+					api := env.GameInterface.(*GameInterface.GameInterface)
+					api.SendSettingsCommand("gamemode 1", true)
+					api.SendSettingsCommand("replaceitem entity @s slot.hotbar 4 spawn_egg 12 51", true)
+					api.SendWSCommandWithResponse("tp 72 117 -75")
+					resp, _ := api.RenameItemByAnvil(
+						[3]int32{72, 117, -75},
+						`["direction": 0, "damage": "undamaged"]`,
+						0,
+						[]GameInterface.ItemRenamingRequest{
+							{
+								Slot: 4,
+								Name: `§r§f§l◀【§6幻§e想§b乡 §f● §d贡献者§f】▶
+		§r§a§lMC丶血小板 §f| §aBaby_2016 §f| §a时祗旧梦丶薰 §f| §a叶澄鑫 §f| §a晓月黯殇
+		§r§a§lAS青璃 §f| §a饿兽黎杉 §f| §a普通的玩家312 §f| §a羽颖YY §f| §ahuangDMST
+		§r§f§l◀【§6幻§e想§b乡 §f● §6留名墙§f】▶
+		§r§b§l诺白郡主 §f| §b字幕君 §f| §b我布是远古 §f| §b我布是白给 §f| §b府白呀
+		§r§b§lLZN乄德方 §f| §bCZG_丑八怪 §f| §b小雨4xy §f| §b牟菇2 §f| §bBMG2HFet
+		§r§b§ltrdfjtss §f| §b家养高粱长跑 §f| §b紫依康 §f| §b亲爱的骷吸气副
+		§r§b§l全服最肝 §f| §b诚挚的末影娘灌篮`,
+							},
+						},
+					)
+					fmt.Printf("%#v\n", resp)
+					holderA := api.Resources.Container.Occupy()
+					api.OpenInventory()
+					for _, value := range resp {
+						itemData, _ := api.Resources.Inventory.GetItemStackInfo(0, value.Destination.Slot)
+						api.DropItemAll(
+							protocol.StackRequestSlotInfo{
+								ContainerID:    0xc,
+								Slot:           value.Destination.Slot,
+								StackNetworkID: itemData.StackNetworkID,
+							},
+							0,
+						)
+					}
+					api.CloseContainer()
+					api.Resources.Container.Release(holderA)
+				}()
+			}
+	*/
+
 	for {
 		if breaker != nil {
 			select {
