@@ -20,5 +20,20 @@
             "文件名称": "RecordBlockChanges.Happy2018new",
             "文件保存频率(单位为分钟, 需填写整数)": 5
         }
+    },
+    {
+        "名称": "API::SignBoard",
+        "描述": "::requestNewSignBoard, ::getNowSignBoardNameList",
+        "版本": "0.0.1",
+        "配置": {
+            "标签名称": "SignBoard:Player",
+            "起始坐标": [0, 0],
+            "终止坐标": [0, 0],
+            "不变坐标": 0.5,
+            "不变轴是X": false,
+            "每列最多允许数量": 3,
+            "触发词": "API::SignBoard",
+            "授权列": ["Happy2018new", "Happy丶Light"]
+        }
     }
 ]
