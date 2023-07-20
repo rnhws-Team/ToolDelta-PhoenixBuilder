@@ -187,8 +187,7 @@ jobs:
     #     export THEOS=~/theos
     #     make package
     - name: Archive binaries
-      run:
-        # mv release/*.deb build/
+      run: |
         ls -lh build/>release.txt
         mv release.txt build/release-list.txt
         cp version build/version.txt
