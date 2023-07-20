@@ -119,6 +119,7 @@ func (client *Client) Auth(ctx context.Context, serverCode string, serverPasswor
 	authreq["server_code"] = serverCode
 	authreq["server_passcode"] = serverPassword
 	authreq["client_public_key"] = key
+	authreq["ignore_version_check"] = true
 	req_content, _ := json.Marshal(&authreq)
 	r, err := client.client.Post(fmt.Sprintf("%s/api/phoenix/login", client.AuthServer), "application/json", bytes.NewBuffer(req_content))
 	if err != nil {
