@@ -202,6 +202,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.TOKEN }}
       with:
         tag_name: v${{ steps.release_version.outputs.release_version }}
+        target_commitish: Personal
         files: |
           fb-upload.tar.gz
           build/*
