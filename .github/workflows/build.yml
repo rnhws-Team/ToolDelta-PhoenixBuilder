@@ -181,11 +181,11 @@ jobs:
     - name: Build
       run: |
         export THEOS=~/theos
-        make all
-    - name: Package for specific platforms
-      run: |
-        export THEOS=~/theos
-        make package
+        make windows-executable-x86_64
+    # - name: Package for specific platforms
+    #   run: |
+    #     export THEOS=~/theos
+    #     make package
     - name: Archive binaries
       run: |
         mv release/*.deb build/
