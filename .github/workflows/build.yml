@@ -195,7 +195,7 @@ jobs:
         tar -czf fb-upload.tar.gz build
     - name: Provide release version
       id: release_version
-      run: echo "release_version=$(cat build/version)"  >> $GITHUB_OUTPUT
+      run: echo "release_version=$(cat build/version.txt)"  >> $GITHUB_OUTPUT
     - name: Release
       uses: softprops/action-gh-release@v0.1.14
       env:
