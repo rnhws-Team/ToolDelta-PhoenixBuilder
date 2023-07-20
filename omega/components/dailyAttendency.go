@@ -7,6 +7,7 @@ import (
 	"phoenixbuilder/minecraft/protocol"
 	"phoenixbuilder/omega/defines"
 	"phoenixbuilder/omega/utils"
+	"sync"
 	"time"
 
 	"github.com/pterm/pterm"
@@ -66,18 +67,19 @@ func (rp *RewardPolicy) isMatch(accumulateDays, continuationDays int) (match boo
 
 type DailyAttendance struct {
 	*defines.BasicComponent
-	Triggers                []string        `json:"触发词"`
-	Usage                   string          `json:"菜单提示"`
-	CheckPointTimeOffset    string          `json:"签到时间偏移"`
-	FileName                string          `json:"玩家签到信息记录文件"`
-	HintOnRepeatCheckout    string          `json:"当玩家一天内重复签到时提示"`
-	StopOnFirstMatch        bool            `json:"为true只匹配第一个符合的签到规则false则使用所有匹配的签到规则"`
-	RewardPolicies          []*RewardPolicy `json:"签到规则"`
-	PlayerLoginDelay        int             `json:"玩家登录延迟"`
-	HintOnSuggestCheckOut   string          `json:"提醒玩家签到的消息"`
-	PassiveCheckOut         bool            `json:"为true时被动签到false时主动签到"`
-	allPlayerAttendanceInfo map[string]*PlayerAttendanceInfo
-	fileChange              bool
+	Triggers                       []string        `json:"触发词"`
+	Usage                          string          `json:"菜单提示"`
+	CheckPointTimeOffset           string          `json:"签到时间偏移"`
+	FileName                       string          `json:"玩家签到信息记录文件"`
+	HintOnRepeatCheckout           string          `json:"当玩家一天内重复签到时提示"`
+	StopOnFirstMatch               bool            `json:"为true只匹配第一个符合的签到规则false则使用所有匹配的签到规则"`
+	RewardPolicies                 []*RewardPolicy `json:"签到规则"`
+	PlayerLoginDelay               int             `json:"玩家登录延迟"`
+	HintOnSuggestCheckOut          string          `json:"提醒玩家签到的消息"`
+	PassiveCheckOut                bool            `json:"为true时被动签到false时主动签到"`
+	allPlayerAttendanceInfo        map[string]*PlayerAttendanceInfo
+	allPlayerAttendanceInfoWriteMu sync.Mutex
+	fileChange                     bool
 }
 
 func (o *DailyAttendance) computeLastCheckPointTime() time.Time {
@@ -116,8 +118,9 @@ func (o *DailyAttendance) Init(cfg *defines.ComponentConfig, storage defines.Sto
 		}
 	}
 	lastCheckPointTime := o.computeLastCheckPointTime()
-	toNow := time.Now().Sub(lastCheckPointTime)
+	toNow := time.Since(lastCheckPointTime)
 	pterm.Info.Printfln("最近一次签到开始时间: %v (-%.1f小时前)", lastCheckPointTime, toNow.Hours())
+	o.allPlayerAttendanceInfoWriteMu = sync.Mutex{}
 
 }
 
@@ -145,7 +148,7 @@ func (o *DailyAttendance) doResponse(player string, accumulateDays, continuation
 		}
 	}
 	if !matched {
-		hint = hint + fmt.Sprintf(" 没有匹配到任何奖励项")
+		hint = hint + " 没有匹配到任何奖励项"
 	}
 	o.Frame.GetBackendDisplay().Write(hint)
 }
@@ -177,7 +180,9 @@ func (o *DailyAttendance) doUpdate(uidString string, record *PlayerAttendanceInf
 	}
 	record.LastAttendanceTime = updatedTimestamp
 	// fmt.Println(record)
+	o.allPlayerAttendanceInfoWriteMu.Lock()
 	o.allPlayerAttendanceInfo[uidString] = record
+	o.allPlayerAttendanceInfoWriteMu.Unlock()
 	o.fileChange = true
 	o.doResponse(record.PlayerName, record.AccumulateAttendanceDays, record.ContinuationAttendanceDays)
 }
@@ -206,7 +211,6 @@ func (o *DailyAttendance) checkOut(playerName string) {
 		}
 	}
 	o.doUpdate(uidStr, record)
-	return
 }
 
 func (o *DailyAttendance) isPlayerChecked(player *uqHolder.Player) bool {
