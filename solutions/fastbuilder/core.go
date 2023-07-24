@@ -337,6 +337,10 @@ func EstablishConnectionAndInitEnv(env *environment.PBEnvironment) {
 	if env.IsDebug {
 		options = append(options, core.OptionDebug)
 	}
+	if args.ExternalListenAddress != "" {
+		external.ListenExt(env, args.ExternalListenAddress)
+	}
+
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*30)
 	authenticator := fbauth.NewAccessWrapper(
 		env.FBAuthClient.(*fbauth.Client),
@@ -363,8 +367,10 @@ func EstablishConnectionAndInitEnv(env *environment.PBEnvironment) {
 			env.RespondUser = env.FBAuthClient.(*fbauth.Client).RespondUser
 		}
 	}
+
 	env.Connection = conn
 	pterm.Println(pterm.Yellow(I18n.T(I18n.ConnectionEstablished)))
+
 	env.UQHolder = uqHolder.NewUQHolder(conn.GameData().EntityRuntimeID)
 	env.UQHolder.(*uqHolder.UQHolder).UpdateFromConn(conn)
 	env.UQHolder.(*uqHolder.UQHolder).CurrentTick = 0
@@ -392,6 +398,7 @@ func EstablishConnectionAndInitEnv(env *environment.PBEnvironment) {
 	functionHolder := env.FunctionHolder.(*function.FunctionHolder)
 	function.InitPresetFunctions(functionHolder)
 	fbtask.InitTaskStatusDisplay(env)
+
 	move.ConnectTime = time.Time{}
 	move.Position = conn.GameData().PlayerPosition
 	move.Pitch = conn.GameData().Pitch
@@ -416,11 +423,7 @@ func EstablishConnectionAndInitEnv(env *environment.PBEnvironment) {
 	taskholder := env.TaskHolder.(*fbtask.TaskHolder)
 	types.ForwardedBrokSender = taskholder.BrokSender
 
-	if args.ExternalListenAddress != "" {
-		external.ListenExt(env, args.ExternalListenAddress)
-	}
 	env.UQHolder.(*uqHolder.UQHolder).UpdateFromConn(conn)
-	return
 }
 
 func getUserInputMD5() (string, error) {
