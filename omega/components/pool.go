@@ -3,6 +3,7 @@ package components
 import (
 	"phoenixbuilder/omega/components/omega_side"
 	"phoenixbuilder/omega/components/qqGroupLink"
+	universe_export "phoenixbuilder/omega/components/universeExport"
 	"phoenixbuilder/omega/components/woodaxe"
 	"phoenixbuilder/omega/defines"
 )
@@ -151,7 +152,7 @@ func GetComponentsPool() map[string]func() defines.Component {
 			return &SnowMenu{BasicComponent: &defines.BasicComponent{}}
 		},
 		"统一导出系统": func() defines.Component {
-			return &defines.StubComponent{BasicComponent: &defines.BasicComponent{}, Hint: "该组件相关功能已被移至专门程序中"}
+			return &universe_export.UniverseExport{BasicComponent: &defines.BasicComponent{}}
 		},
 		"服服互通": func() defines.Component {
 			return &SeverToServerChatRoom{BasicComponent: &defines.BasicComponent{}}
