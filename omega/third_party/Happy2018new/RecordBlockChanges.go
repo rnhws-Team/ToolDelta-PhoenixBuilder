@@ -67,7 +67,7 @@ func (o *RecordBlockChanges) RequestBlockChangesInfo(BlockInfo packet.UpdateBloc
 	var err error
 	// prepare
 	if BlockNBT != nil {
-		stringNBT, err = mcstructure.MarshalBlockStates(BlockNBT)
+		stringNBT, err = mcstructure.ConvertCompoundToString(BlockNBT)
 		if err != nil {
 			stringNBT = "undefined"
 		}
