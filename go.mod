@@ -9,6 +9,7 @@ require (
 )
 
 require (
+	github.com/Tnze/go-mc v1.19.3 // indirect
 	github.com/atomicgo/cursor v0.0.1 // indirect
 	github.com/df-mc/atomic v1.10.0 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
@@ -23,6 +24,7 @@ require (
 	github.com/templexxx/xorsimd v0.4.1 // indirect
 	github.com/tjfoc/gmsm v1.3.2 // indirect
 	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
+	github.com/yuin/gopher-lua v1.1.0 // indirect
 	golang.org/x/image v0.5.0 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/sys v0.5.0 // indirect

@@ -67,7 +67,7 @@ func (o *RecordBlockChanges) RequestBlockChangesInfo(BlockInfo packet.UpdateBloc
 	var err error
 	// prepare
 	if BlockNBT != nil {
-		stringNBT, err = mcstructure.ConvertCompoundToString(BlockNBT, false)
+		stringNBT, err = mcstructure.MarshalBlockStates(BlockNBT)
 		if err != nil {
 			stringNBT = "undefined"
 		}
@@ -81,7 +81,7 @@ func (o *RecordBlockChanges) RequestBlockChangesInfo(BlockInfo packet.UpdateBloc
 			blockName_Result = "unknown"
 		}
 		// get block name
-		blockStates_Result, err = mcstructure.ConvertCompoundToString(singleBlock.Properties, true)
+		blockStates_Result, err = mcstructure.MarshalBlockStates(singleBlock.Properties)
 		if err != nil {
 			blockStates_Result = "undefined"
 		}
