@@ -58,6 +58,7 @@ func (o *ChangeItemNameByUseAnvil) ChangeItemNameRunner(chat *defines.GameChat) 
 			for _, name := range o.Operators {
 				if name == chat.Name {
 					flag = true
+					break
 				}
 			}
 			if !flag {
@@ -234,7 +235,7 @@ func (o *ChangeItemNameByUseAnvil) ChangeItemName(chat *defines.GameChat) {
 	}
 	// 确定被改名物品存在
 	cmdResp := o.apis.SendWSCommandWithResponse(
-		"querytarget @s",
+		fmt.Sprintf("querytarget %#v", chat.Name),
 		ResourcesControl.CommandRequestOptions{
 			TimeOut: ResourcesControl.CommandRequestNoDeadLine,
 		},
@@ -252,10 +253,27 @@ func (o *ChangeItemNameByUseAnvil) ChangeItemName(chat *defines.GameChat) {
 	}
 	pos := [3]int32{
 		int32(math.Floor(float64(parseAns[0].Position[0]))),
-		int32(math.Floor(float64(parseAns[0].Position[1]))),
+		int32(math.Floor(float64(parseAns[0].Position[1] - 1.62001001834869))),
 		int32(math.Floor(float64(parseAns[0].Position[2]))),
 	}
-	// 取得机器人当前的坐标
+	// 取得请求者当前的坐标
+	err = o.apis.SendSettingsCommand(
+		fmt.Sprintf(`execute @a[name=%#v] ~ ~ ~ tp @a[name=%#v] %d %d %d`, chat.Name, o.apis.ClientInfo.DisplayName, pos[0], pos[1], pos[2]),
+		false,
+	)
+	if err != nil {
+		panic(pterm.Error.Sprintf("修改物品名称: %v", err))
+	}
+	cmdResp = o.apis.SendWSCommandWithResponse(
+		"list",
+		ResourcesControl.CommandRequestOptions{
+			TimeOut: ResourcesControl.CommandRequestDefaultDeadLine,
+		},
+	)
+	if cmdResp.Error != nil {
+		panic(pterm.Error.Sprintf("修改物品名称: %v", cmdResp.Error))
+	}
+	// 将机器人传送到玩家处
 	resp, err := o.apis.RenameItemByAnvil(
 		pos,
 		`["direction": 0, "damage": "undamaged"]`,
