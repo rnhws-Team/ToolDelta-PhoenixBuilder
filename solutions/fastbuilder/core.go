@@ -227,12 +227,12 @@ func EnterWorkerThread(env *environment.PBEnvironment, breaker chan struct{}) {
 			}
 		}
 
+		go env.ResourcesUpdater.(func(pk *packet.Packet))(&pk)
+
 		if env.OmegaAdaptorHolder != nil {
 			env.OmegaAdaptorHolder.(*embed.EmbeddedAdaptor).FeedPacketAndByte(pk, data)
 			continue
 		}
-
-		go env.ResourcesUpdater.(func(pk *packet.Packet))(&pk)
 
 		env.UQHolder.(*uqHolder.UQHolder).Update(pk)
 		if env.ExternalConnectionHandler != nil {
