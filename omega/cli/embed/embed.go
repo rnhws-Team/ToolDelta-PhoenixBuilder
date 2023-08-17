@@ -7,6 +7,7 @@ import (
 	"phoenixbuilder/fastbuilder/function"
 	fbauth "phoenixbuilder/fastbuilder/pv4"
 	"phoenixbuilder/fastbuilder/uqHolder"
+	GameInterface "phoenixbuilder/game_control/game_interface"
 	"phoenixbuilder/minecraft"
 	mc_packet "phoenixbuilder/minecraft/protocol/packet"
 	"phoenixbuilder/mirror"
@@ -48,6 +49,10 @@ func (rc *EmbeddedAdaptor) GetInitUQHolderCopy() *uqHolder.UQHolder {
 		return nil
 	}
 	return newHolder
+}
+
+func (rc *EmbeddedAdaptor) GetInteraction() *GameInterface.GameInterface {
+	return rc.env.GameInterface.(*GameInterface.GameInterface)
 }
 
 func (rc *EmbeddedAdaptor) Write(pkt mc_packet.Packet) (err error) {

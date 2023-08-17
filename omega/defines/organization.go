@@ -2,6 +2,7 @@ package defines
 
 import (
 	"phoenixbuilder/fastbuilder/uqHolder"
+	GameInterface "phoenixbuilder/game_control/game_interface"
 	"phoenixbuilder/minecraft/protocol"
 	"phoenixbuilder/minecraft/protocol/packet"
 	"phoenixbuilder/mirror"
@@ -134,6 +135,7 @@ type ExtendOperation interface {
 // 建议扩展该接口以提供更丰富的功能
 // 另一种扩展方式是定义新插件并暴露接口
 type GameControl interface {
+	GetInteraction() GameInterface.GameInterface
 	SendMCPacket(packet.Packet)
 	SayTo(target string, msg string)
 	RawSayTo(target string, msg string)

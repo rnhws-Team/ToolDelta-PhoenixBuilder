@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"phoenixbuilder/fastbuilder/uqHolder"
+	GameInterface "phoenixbuilder/game_control/game_interface"
 	"phoenixbuilder/minecraft/protocol"
 	"phoenixbuilder/minecraft/protocol/packet"
 	"phoenixbuilder/mirror/define"
@@ -344,6 +345,7 @@ func (o *PacketOutAnalyzer) Write(p packet.Packet) error {
 }
 
 type GameCtrl struct {
+	Interaction         *GameInterface.GameInterface
 	analyzer            *PacketOutAnalyzer
 	WriteBytesFn        func([]byte) error
 	WriteFn             func(packet packet.Packet) error
@@ -360,6 +362,10 @@ type GameCtrl struct {
 	PlayerPermission      map[string]map[string]bool
 	onBlockActorCbs       map[define.CubePos]func(define.CubePos, *packet.BlockActorData)
 	placeCommandBlockLock sync.Mutex
+}
+
+func (g *GameCtrl) GetInteraction() GameInterface.GameInterface {
+	return *g.Interaction
 }
 
 func (g *GameCtrl) GetPlayerKit(name string) defines.PlayerKit {
@@ -640,6 +646,7 @@ func newGameCtrl(o *Omega) *GameCtrl {
 	analyzer := NewPacketOutAnalyzer(o.adaptor.Write)
 
 	c := &GameCtrl{
+		Interaction:         o.adaptor.GetInteraction(),
 		WriteFn:             analyzer.Write,
 		WriteBytesFn:        o.adaptor.WriteBytes,
 		ExpectedCmdFeedBack: o.OmegaConfig.CommandFeedBackByDefault,
@@ -655,6 +662,7 @@ func newGameCtrl(o *Omega) *GameCtrl {
 		placeCommandBlockLock: sync.Mutex{},
 	}
 	c.analyzer = analyzer
+	c.Interaction.WritePacket = c.WriteFn
 
 	err := o.GetJsonData("playerPermission.json", &c.PlayerPermission)
 	if err != nil {
