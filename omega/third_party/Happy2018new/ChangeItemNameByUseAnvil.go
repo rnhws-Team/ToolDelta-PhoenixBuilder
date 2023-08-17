@@ -21,11 +21,12 @@ import (
 
 type ChangeItemNameByUseAnvil struct {
 	*defines.BasicComponent
-	apis     GameInterface.GameInterface
-	lockDown sync.Mutex
-	Triggers []string `json:"菜单触发词"`
-	Usage    string   `json:"菜单项描述"`
-	FilePath string   `json:"从何处提取物品的新名称(填写路径)"`
+	apis      GameInterface.GameInterface
+	lockDown  sync.Mutex
+	Triggers  []string `json:"菜单触发词"`
+	Usage     string   `json:"菜单项描述"`
+	FilePath  string   `json:"从何处提取物品的新名称(填写路径)"`
+	Operators []string `json:"授权使用者"`
 }
 
 func (o *ChangeItemNameByUseAnvil) Init(settings *defines.ComponentConfig, storage defines.StorageAndLogProvider) {
@@ -52,11 +53,25 @@ func (o *ChangeItemNameByUseAnvil) Inject(frame defines.MainFrame) {
 
 func (o *ChangeItemNameByUseAnvil) ChangeItemNameRunner(chat *defines.GameChat) bool {
 	go func() {
-		if !o.lockDown.TryLock() {
-			o.Frame.GetGameControl().SayTo(chat.Name, "§c请求过于频繁§f，§c请稍后再试")
-			return
+		{
+			flag := false
+			for _, name := range o.Operators {
+				if name == chat.Name {
+					flag = true
+				}
+			}
+			if !flag {
+				o.Frame.GetGameControl().SayTo(chat.Name, "§c你没有权限使用这个功能")
+				return
+			}
 		}
-		defer o.lockDown.Unlock()
+		{
+			if !o.lockDown.TryLock() {
+				o.Frame.GetGameControl().SayTo(chat.Name, "§c请求过于频繁§f，§c请稍后再试")
+				return
+			}
+			defer o.lockDown.Unlock()
+		}
 		o.ChangeItemName(chat)
 	}()
 	return true
