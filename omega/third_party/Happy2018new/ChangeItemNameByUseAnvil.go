@@ -83,6 +83,7 @@ func (o *ChangeItemNameByUseAnvil) ChangeItemName(chat *defines.GameChat) {
 	var targetSlot uint8 = 0
 	var readPos []int32 = []int32{}
 	var itemName string = ""
+	var dropResp bool
 	o.apis.ClientInfo.DisplayName = o.Frame.GetUQHolder().GetBotName()
 	// 初始化
 	if len(chat.Msg) > 0 {
@@ -311,22 +312,55 @@ func (o *ChangeItemNameByUseAnvil) ChangeItemName(chat *defines.GameChat) {
 		return
 	}
 	// 读取新物品的数据
-	holder := o.apis.Resources.Container.Occupy()
-	o.apis.OpenInventory()
-	dropResp, err := o.apis.DropItemAll(
-		protocol.StackRequestSlotInfo{
-			ContainerID:    0xc,
-			Slot:           resp[0].Destination.Slot,
-			StackNetworkID: newItemDatas.StackNetworkID,
-		},
-		0,
+	err = o.apis.SendSettingsCommand(
+		fmt.Sprintf(`execute @a[name=%#v] ~ ~ ~ tp @a[name=%#v] %d %d %d`, chat.Name, o.apis.ClientInfo.DisplayName, pos[0], pos[1], pos[2]),
+		false,
 	)
-	o.apis.CloseContainer()
-	o.apis.Resources.Container.Release(holder)
 	if err != nil {
-		o.Frame.GetGameControl().SayTo(chat.Name, "§c尝试丢出新物品时失败\n详细日志已发送到控制台")
-		pterm.Error.Printf("修改物品名称: %v\n", err)
-		return
+		panic(pterm.Error.Sprintf("修改物品名称: %v", err))
+	}
+	cmdResp = o.apis.SendWSCommandWithResponse(
+		"list",
+		ResourcesControl.CommandRequestOptions{
+			TimeOut: ResourcesControl.CommandRequestDefaultDeadLine,
+		},
+	)
+	if cmdResp.Error != nil {
+		panic(pterm.Error.Sprintf("修改物品名称: %v", cmdResp.Error))
+	}
+	// 再次将机器人传送到玩家处
+	if resp[0].Destination.Slot < 9 {
+		dropResp, err = o.apis.DropItemAll(
+			protocol.StackRequestSlotInfo{
+				ContainerID:    GameInterface.ContainerIDHotBar,
+				Slot:           resp[0].Destination.Slot,
+				StackNetworkID: newItemDatas.StackNetworkID,
+			},
+			0,
+		)
+		if err != nil {
+			o.Frame.GetGameControl().SayTo(chat.Name, "§c尝试丢出新物品时失败\n详细日志已发送到控制台")
+			pterm.Error.Printf("修改物品名称: %v\n", err)
+			return
+		}
+	} else {
+		holder := o.apis.Resources.Container.Occupy()
+		o.apis.OpenInventory()
+		dropResp, err = o.apis.DropItemAll(
+			protocol.StackRequestSlotInfo{
+				ContainerID:    0xc,
+				Slot:           resp[0].Destination.Slot,
+				StackNetworkID: newItemDatas.StackNetworkID,
+			},
+			0,
+		)
+		if err != nil {
+			o.Frame.GetGameControl().SayTo(chat.Name, "§c尝试丢出新物品时失败\n详细日志已发送到控制台")
+			pterm.Error.Printf("修改物品名称: %v\n", err)
+			return
+		}
+		o.apis.CloseContainer()
+		o.apis.Resources.Container.Release(holder)
 	}
 	if !dropResp {
 		o.Frame.GetGameControl().SayTo(chat.Name, "§c尝试丢出新物品时失败\n详细日志已发送到控制台")
