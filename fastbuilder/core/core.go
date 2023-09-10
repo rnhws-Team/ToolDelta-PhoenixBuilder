@@ -241,6 +241,8 @@ func EnterWorkerThread(env *environment.PBEnvironment, breaker chan struct{}) {
 			panic(err)
 		}
 
+		env.ResourcesUpdater.(func(*packet.Packet))(&pk)
+
 		if env.OmegaAdaptorHolder != nil {
 			env.OmegaAdaptorHolder.(*embed.EmbeddedAdaptor).FeedPacketAndByte(pk, data)
 			continue
@@ -451,6 +453,7 @@ func EstablishConnectionAndInitEnv(env *environment.PBEnvironment) {
 	env.UQHolder.(*uqHolder.UQHolder).UpdateFromConn(conn)
 	env.UQHolder.(*uqHolder.UQHolder).CurrentTick = 0
 	env.Resources = &ResourcesControl.Resources{}
+	env.ResourcesUpdater = env.Resources.(*ResourcesControl.Resources).Init()
 	env.GameInterface = &GameInterface.GameInterface{
 		WritePacket: env.Connection.(*minecraft.Conn).WritePacket,
 		ClientInfo: GameInterface.ClientInfo{

@@ -25,6 +25,7 @@ type PBEnvironment struct {
 	GetCheckNumEverPassed     bool
 	UQHolder                  interface{}
 	Resources                 interface{}
+	ResourcesUpdater          interface{}
 	GameInterface             interfaces.GameInterface
 	TaskHolder                interface{}
 	OmegaHolder               interface{}
