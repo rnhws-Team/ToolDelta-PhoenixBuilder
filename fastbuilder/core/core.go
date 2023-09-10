@@ -1,4 +1,4 @@
-package fastbuilder
+package core
 
 import (
 	"bufio"
@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"phoenixbuilder/fastbuilder/args"
-	"phoenixbuilder/fastbuilder/core"
 	"phoenixbuilder/fastbuilder/environment"
 	"phoenixbuilder/fastbuilder/external"
 	"phoenixbuilder/fastbuilder/function"
@@ -102,22 +101,11 @@ func EnterReadlineThread(env *environment.PBEnvironment, breaker chan struct{}) 
 	}
 }
 
-// Process packet if the data type is `packet.PyRpc`.
-// If not, do nothing.
-func onPyRpc(
-	pk packet.Packet,
-	env *environment.PBEnvironment,
-) {
-	p, ok := pk.(*packet.PyRpc)
+func onPyRpc(p *packet.PyRpc, env *environment.PBEnvironment) {
 	conn := env.Connection.(*minecraft.Conn)
-	// prepare
-	if !ok {
+	if p.Value == nil {
 		return
 	}
-	if pk == nil || p.Value == nil {
-		return
-	}
-	// check packet
 	go_p_val := p.Value.MakeGo()
 	/*
 		json_val, _:=json.MarshalIndent(go_p_val, "", "\t")
@@ -138,7 +126,6 @@ func onPyRpc(
 	if !ok {
 		return
 	}
-	// process data from packet
 	switch command {
 	case "S2CHeartBeat":
 		conn.WritePacket(&packet.PyRpc{
@@ -180,7 +167,6 @@ func onPyRpc(
 		})
 		env.GetCheckNumEverPassed = true
 	}
-	// do something
 }
 
 func EnterWorkerThread(env *environment.PBEnvironment, breaker chan struct{}) {
@@ -188,7 +174,7 @@ func EnterWorkerThread(env *environment.PBEnvironment, breaker chan struct{}) {
 	functionHolder := env.FunctionHolder.(*function.FunctionHolder)
 
 	chunkAssembler := assembler.NewAssembler(assembler.REQUEST_AGGRESSIVE, time.Second*5)
-	// max 100 chunk request per second
+	// max 100 chunk requests per second
 	chunkAssembler.CreateRequestScheduler(func(pk *packet.SubChunkRequest) {
 		conn.WritePacket(pk)
 	})
@@ -255,9 +241,6 @@ func EnterWorkerThread(env *environment.PBEnvironment, breaker chan struct{}) {
 			panic(err)
 		}
 
-		onPyRpc(pk, env)
-		go env.ResourcesUpdater.(func(pk *packet.Packet))(&pk)
-
 		if env.OmegaAdaptorHolder != nil {
 			env.OmegaAdaptorHolder.(*embed.EmbeddedAdaptor).FeedPacketAndByte(pk, data)
 			continue
@@ -269,24 +252,12 @@ func EnterWorkerThread(env *environment.PBEnvironment, breaker chan struct{}) {
 		}
 		// fmt.Println(omega_utils.PktIDInvMapping[int(pk.ID())])
 		switch p := pk.(type) {
-		// case *packet.AdventureSettings:
-		// 	if conn.GameData().EntityUniqueID == p.PlayerUniqueID {
-		// 		if p.PermissionLevel >= packet.PermissionLevelOperator {
-		// 			opPrivilegeGranted = true
-		// 		} else {
-		// 			opPrivilegeGranted = false
-		// 		}
-		// 	}
-		// case *packet.ClientCacheMissResponse:
-		// 	pterm.Info.Println("ClientCacheMissResponse", p)
-		// case *packet.ClientCacheStatus:
-		// 	pterm.Info.Println("ClientCacheStatus", p)
-		// case *packet.ClientCacheBlobStatus:
-		// 	pterm.Info.Println("ClientCacheBlobStatus", p)
+		case *packet.PyRpc:
+			onPyRpc(p, env)
 		case *packet.Text:
 			if p.TextType == packet.TextTypeChat {
 				if args.InGameResponse {
-					if p.SourceName == env.RespondUser {
+					if p.SourceName == env.RespondTo {
 						functionHolder.Process(p.Message)
 					}
 				}
@@ -363,6 +334,81 @@ func EnterWorkerThread(env *environment.PBEnvironment, breaker chan struct{}) {
 	}
 }
 
+func InitializeMinecraftConnection(ctx context.Context, authenticator minecraft.Authenticator) (conn *minecraft.Conn, err error) {
+	if args.DebugMode {
+		conn = &minecraft.Conn{
+			DebugMode: true,
+		}
+	} else {
+		dialer := minecraft.Dialer{
+			Authenticator: authenticator,
+		}
+		conn, err = dialer.DialContext(ctx, "raknet")
+	}
+	if err != nil {
+		return
+	}
+	conn.WritePacket(&packet.ClientCacheStatus{
+		Enabled: false,
+	})
+	runtimeid := fmt.Sprintf("%d", conn.GameData().EntityUniqueID)
+	conn.WritePacket(&packet.PyRpc{
+		Value: py_rpc.FromGo([]interface{}{
+			"SyncUsingMod",
+			[]interface{}{},
+			nil,
+		}),
+	})
+	conn.WritePacket(&packet.PyRpc{
+		Value: py_rpc.FromGo([]interface{}{
+			"SyncVipSkinUuid",
+			[]interface{}{nil},
+			nil,
+		}),
+	})
+	conn.WritePacket(&packet.PyRpc{
+		Value: py_rpc.FromGo([]interface{}{
+			"ClientLoadAddonsFinishedFromGac",
+			[]interface{}{},
+			nil,
+		}),
+	})
+	conn.WritePacket(&packet.PyRpc{
+		Value: py_rpc.FromGo([]interface{}{
+			"ModEventC2S",
+			[]interface{}{
+				"Minecraft",
+				"preset",
+				"GetLoadedInstances",
+				map[string]interface{}{
+					"playerId": runtimeid,
+				},
+			},
+			nil,
+		}),
+	})
+	conn.WritePacket(&packet.PyRpc{
+		Value: py_rpc.FromGo([]interface{}{
+			"arenaGamePlayerFinishLoad",
+			[]interface{}{},
+			nil,
+		}),
+	})
+	conn.WritePacket(&packet.PyRpc{
+		Value: py_rpc.FromGo([]interface{}{
+			"ModEventC2S",
+			[]interface{}{
+				"Minecraft",
+				"vipEventSystem",
+				"PlayerUiInit",
+				runtimeid,
+			},
+			nil,
+		}),
+	})
+	return
+}
+
 func EstablishConnectionAndInitEnv(env *environment.PBEnvironment) {
 	if env.FBAuthClient == nil {
 		env.ClientOptions.AuthServer = args.AuthServer
@@ -370,14 +416,6 @@ func EstablishConnectionAndInitEnv(env *environment.PBEnvironment) {
 		env.FBAuthClient = fbauth.CreateClient(env.ClientOptions)
 	}
 	pterm.Println(pterm.Yellow(fmt.Sprintf("%s: %s", I18n.T(I18n.ServerCodeTrans), env.LoginInfo.ServerCode)))
-
-	options := []core.Option{}
-	if env.IsDebug {
-		options = append(options, core.OptionDebug)
-	}
-	if args.ExternalListenAddress != "" {
-		external.ListenExt(env, args.ExternalListenAddress)
-	}
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*30)
 	authenticator := fbauth.NewAccessWrapper(
@@ -388,7 +426,7 @@ func EstablishConnectionAndInitEnv(env *environment.PBEnvironment) {
 		env.LoginInfo.Username,
 		env.LoginInfo.Password,
 	)
-	conn, err := core.InitializeMinecraftConnection(ctx, authenticator, options...)
+	conn, err := InitializeMinecraftConnection(ctx, authenticator)
 
 	if err != nil {
 		pterm.Error.Println(err)
@@ -398,11 +436,11 @@ func EstablishConnectionAndInitEnv(env *environment.PBEnvironment) {
 		}
 		panic(err)
 	}
-	if len(env.RespondUser) == 0 {
+	if len(env.RespondTo) == 0 {
 		if args.CustomGameName != "" {
-			env.RespondUser = args.CustomGameName
+			env.RespondTo = args.CustomGameName
 		} else {
-			env.RespondUser = env.FBAuthClient.(*fbauth.Client).RespondUser
+			env.RespondTo = env.FBAuthClient.(*fbauth.Client).RespondTo
 		}
 	}
 
@@ -412,9 +450,7 @@ func EstablishConnectionAndInitEnv(env *environment.PBEnvironment) {
 	env.UQHolder = uqHolder.NewUQHolder(conn.GameData().EntityRuntimeID)
 	env.UQHolder.(*uqHolder.UQHolder).UpdateFromConn(conn)
 	env.UQHolder.(*uqHolder.UQHolder).CurrentTick = 0
-
 	env.Resources = &ResourcesControl.Resources{}
-	env.ResourcesUpdater = env.Resources.(*ResourcesControl.Resources).Init()
 	env.GameInterface = &GameInterface.GameInterface{
 		WritePacket: env.Connection.(*minecraft.Conn).WritePacket,
 		ClientInfo: GameInterface.ClientInfo{

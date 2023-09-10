@@ -1,4 +1,4 @@
-package fastbuilder
+package core
 
 import (
 	"phoenixbuilder/fastbuilder/args"
@@ -20,7 +20,6 @@ func create_environment() *environment.PBEnvironment {
 	}
 	env.UQHolder = nil
 	env.Resources = nil
-	env.ActivateTaskStatus = make(chan bool)
 	env.TaskHolder = fbtask.NewTaskHolder()
 	functionHolder := function.NewFunctionHolder(env)
 	env.FunctionHolder = functionHolder
@@ -37,8 +36,8 @@ func ConfigRealEnvironment(token string, server_code string, server_password str
 		Token:          token,
 		ServerCode:     server_code,
 		ServerPasscode: server_password,
-		Username: username,
-		Password: password,
+		Username:       username,
+		Password:       password,
 	}
 	env.FBAuthClient = fbauth.CreateClient(env.ClientOptions)
 	return env
@@ -53,7 +52,7 @@ func ConfigDebugEnvironment() *environment.PBEnvironment {
 	return env
 }
 
-func DestroyEnv(env *environment.PBEnvironment) {
+func DestroyEnvironment(env *environment.PBEnvironment) {
 	env.Stop()
 	env.WaitStopped()
 	env.Connection.(*minecraft.Conn).Close()

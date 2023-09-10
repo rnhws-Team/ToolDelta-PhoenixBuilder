@@ -17,22 +17,18 @@ type LoginInfo struct {
 type PBEnvironment struct {
 	LoginInfo
 	IsDebug                   bool
-	ScriptBridge              interface{}
-	ScriptHolder              interface{}
 	FunctionHolder            interfaces.FunctionHolder
 	FBAuthClient              interface{}
 	GlobalFullConfig          interface{}
-	RespondUser               string
+	RespondTo                 string
 	Connection                interface{}
 	GetCheckNumEverPassed     bool
 	UQHolder                  interface{}
 	Resources                 interface{}
-	ResourcesUpdater          interface{}
 	GameInterface             interfaces.GameInterface
 	TaskHolder                interface{}
 	OmegaHolder               interface{}
 	OmegaAdaptorHolder        interface{}
-	ActivateTaskStatus        chan bool
 	ExternalConnectionHandler interface{}
 	Destructors               []func()
 	isStopping                bool
