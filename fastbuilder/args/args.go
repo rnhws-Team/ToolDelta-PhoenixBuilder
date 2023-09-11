@@ -20,6 +20,7 @@ extern char externalListenAddr;
 extern char args_no_readline;
 extern char custom_gamename;
 extern char ingame_response;
+extern char listen_address;
 */
 import "C"
 
@@ -43,6 +44,7 @@ func referenceHolder() {
 	print(C.args_no_readline)
 	print(C.custom_gamename)
 	print(C.ingame_response)
+	print(C.listen_address)
 }
 
 var FBVersion string = *(*string)(unsafe.Pointer(&__cgo_args_var_fbversion_struct))

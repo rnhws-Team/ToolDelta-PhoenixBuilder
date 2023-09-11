@@ -45,6 +45,7 @@ char args_no_readline=0;
 char enable_omega_system=0;
 struct go_string custom_gamename=EMPTY_GOSTRING;
 char ingame_response=0;
+struct go_string listen_address=EMPTY_GOSTRING;
 
 void print_help(const char *self_name) {
 	printf("%s [options]\n",self_name);
@@ -195,7 +196,7 @@ int _parse_args(int argc, char **argv) {
 			{0, 0, 0, 0}
 		};
 		int option_index;
-		int c=getopt_long(argc,argv,"hA:vc:p:t:T:N:", opts, &option_index);
+		int c=getopt_long(argc,argv,"hA:vc:p:t:T:N:L:", opts, &option_index);
 		if(c==-1)
 			break;
 		switch(c) {
