@@ -196,7 +196,7 @@ int _parse_args(int argc, char **argv) {
 			{0, 0, 0, 0}
 		};
 		int option_index;
-		int c=getopt_long(argc,argv,"hA:vc:p:t:T:N:L:", opts, &option_index);
+		int c=getopt_long(argc,argv,"hA:MvS:c:p:t:T:E:ON:", opts, &option_index);
 		if(c==-1)
 			break;
 		switch(c) {
@@ -240,17 +240,17 @@ int _parse_args(int argc, char **argv) {
 		case 'T':
 			quickset(&token_content);
 			break;
-		case 'v':
-			print_version(1);
-			return 0;
-		case 'N':
-			quickset(&custom_gamename);
-			break;
 		case 'E': // reserve
 			quickset(&externalListenAddr);
 			break;
+		case 'v':
+			print_version(1);
+			return 0;
 		case 'O': // reserve
 			enable_omega_system=1;
+			break;
+		case 'N':
+			quickset(&custom_gamename);
 			break;
 		default:
 			print_help(argv[0]);

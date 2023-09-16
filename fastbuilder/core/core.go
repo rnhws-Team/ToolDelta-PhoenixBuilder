@@ -419,6 +419,10 @@ func EstablishConnectionAndInitEnv(env *environment.PBEnvironment) {
 	}
 	pterm.Println(pterm.Yellow(fmt.Sprintf("%s: %s", I18n.T(I18n.ServerCodeTrans), env.LoginInfo.ServerCode)))
 
+	if args.ExternalListenAddress != "" {
+		external.ListenExt(env, args.ExternalListenAddress)
+	}
+
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*30)
 	authenticator := fbauth.NewAccessWrapper(
 		env.FBAuthClient.(*fbauth.Client),
