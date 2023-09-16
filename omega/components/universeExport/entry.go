@@ -112,7 +112,7 @@ func (o *Exporter) Activate() {
 			// fmt.Println("Cached")
 			continue
 		}
-		cd := o.provider.GetWithNoFallBack(pos)
+		cd := o.provider.GetWithNoFallback(pos)
 		if cd != nil {
 			// fmt.Println("HIT")
 			o.chunks[pos] = cd
@@ -125,7 +125,7 @@ func (o *Exporter) Activate() {
 	for pos, ct := range *o.allRequiredChunks {
 		// fmt.Println("WANT 1", pos)
 		if ct.CachedMark {
-			cd := o.frame.GetWorldProvider().GetWithNoFallBack(pos)
+			cd := o.frame.GetWorldProvider().GetWithNoFallback(pos)
 			if cd != nil {
 				o.provider.Write(cd)
 				o.chunks[pos] = cd
@@ -133,7 +133,7 @@ func (o *Exporter) Activate() {
 			// fmt.Println("Cached")
 			continue
 		}
-		cd := o.frame.GetWorldProvider().GetWithNoFallBack(pos)
+		cd := o.frame.GetWorldProvider().GetWithNoFallback(pos)
 		if cd != nil {
 			// fmt.Println("HIT")
 			o.chunks[pos] = cd

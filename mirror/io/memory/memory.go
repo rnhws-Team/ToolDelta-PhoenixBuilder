@@ -31,7 +31,7 @@ func (o *MemoryChunkHolder) Get(pos define.ChunkPos) (data *mirror.ChunkData) {
 	}
 }
 
-func (o *MemoryChunkHolder) GetWithNoFallBack(pos define.ChunkPos) (data *mirror.ChunkData) {
+func (o *MemoryChunkHolder) GetWithNoFallback(pos define.ChunkPos) (data *mirror.ChunkData) {
 	return o.Get(pos)
 }
 

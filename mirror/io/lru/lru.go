@@ -46,7 +46,7 @@ func (o *LRUMemoryChunkCacher) Get(pos define.ChunkPos) (data *mirror.ChunkData)
 	}
 }
 
-func (o *LRUMemoryChunkCacher) GetWithNoFallBack(pos define.ChunkPos) (data *mirror.ChunkData) {
+func (o *LRUMemoryChunkCacher) GetWithNoFallback(pos define.ChunkPos) (data *mirror.ChunkData) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	if chunk, hasK := o.memoryChunks[pos]; hasK {
