@@ -37,7 +37,7 @@ func setup() {
 }
 
 func display_info() {
-	pterm.DefaultBox.Println(pterm.LightCyan("https://github.com/Happy2018new/PhoenixBuilder/tree/Personal"))
+	pterm.DefaultBox.Println(pterm.LightCyan("https://github.com/rnhws-Team/ToolDelta-PhoenixBuilder"))
 	pterm.Println(pterm.Yellow("ToolDelta-PhoenixBuilder " + args.FBVersion))
 	pterm.Println(pterm.Yellow("免责声明 - 此版本由第三方发行，与官方分支无关"))
 	if I18n.ShouldDisplaySpecial() {
