@@ -2,7 +2,7 @@ name: Check
 
 on:
   push:
-    branches: [ Personal ]
+    branches: [ main ]
   pull_request: {}
 
 jobs:

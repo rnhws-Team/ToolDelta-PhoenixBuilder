@@ -38,8 +38,8 @@ func setup() {
 
 func display_info() {
 	pterm.DefaultBox.Println(pterm.LightCyan("https://github.com/Happy2018new/PhoenixBuilder/tree/Personal"))
-	pterm.Println(pterm.Yellow("PhoenixBuilder " + args.FBVersion))
-	pterm.Println(pterm.Yellow("注 - 此分叉只为 Happy2018new 个人使用而提供"))
+	pterm.Println(pterm.Yellow("ToolDelta-PhoenixBuilder " + args.FBVersion))
+	pterm.Println(pterm.Yellow("免责声明 - 此版本由第三方发行，与官方分支无关"))
 	if I18n.ShouldDisplaySpecial() {
 		fmt.Printf("%s", I18n.T(I18n.Special_Startup))
 	}
