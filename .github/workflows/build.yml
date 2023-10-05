@@ -10,17 +10,7 @@ on:
 jobs:
   linux-build:
     runs-on: ubuntu-22.04
-    steps:
-    - name: Maximize build space
-      uses: easimon/maximize-build-space@master
-      with:
-        root-reserve-mb: 20480
-        swap-size-mb: 1024
-        remove-dotnet: 'true'
-        remove-docker-images: 'true'
-        remove-codeql: 'true'
-        remove-haskell: 'true'
-        
+    steps:        
     - name: Checkout repo
       uses: actions/checkout@v2
       with:
@@ -178,6 +168,14 @@ jobs:
         tar -xJf openwrt-sdk-22.03.0-rc4-mediatek-mt7622_gcc-11.2.0_musl.Linux-x86_64.tar.xz
         rm openwrt-sdk-22.03.0-rc4-mediatek-mt7622_gcc-11.2.0_musl.Linux-x86_64.tar.xz
         mv openwrt-sdk-22.03.0-rc4-mediatek-mt7622_gcc-11.2.0_musl.Linux-x86_64 ~/
+    - name: Maximize build space
+      uses: easimon/maximize-build-space@master
+      with:
+        root-reserve-mb: 1024
+        swap-size-mb: 1024
+        remove-dotnet: 'true'
+        remove-docker-images: 'true'
+        remove-codeql: 'true'
     - name: Set build time
       id: build_time
       run: echo "build_time=$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
