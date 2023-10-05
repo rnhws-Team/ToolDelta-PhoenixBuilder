@@ -11,6 +11,12 @@ jobs:
   linux-build:
     runs-on: ubuntu-22.04
     steps:        
+    - name: Del unnecessary files
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        sudo docker image prune --all --force
     - name: Checkout repo
       uses: actions/checkout@v2
       with:
@@ -178,14 +184,6 @@ jobs:
         make clean
         chmod 0777 ~/go/pkg/mod/github.com/sandertv/go-raknet@v1.12.0/
         sed -i "s/urrentProtocol byte = 11/urrentProtocol byte = 8/g" ~/go/pkg/mod/github.com/sandertv/go-raknet@v1.12.0/conn.go
-    - name: Maximize build space
-      uses: easimon/maximize-build-space@master
-      with:
-        root-reserve-mb: 1024
-        swap-size-mb: 1024
-        remove-dotnet: 'true'
-        remove-docker-images: 'true'
-        remove-codeql: 'true'
     - name: Build
       run: |
         export THEOS=~/theos
