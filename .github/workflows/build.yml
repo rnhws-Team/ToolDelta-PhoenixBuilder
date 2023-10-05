@@ -19,6 +19,7 @@ jobs:
         remove-dotnet: 'true'
         remove-docker-images: 'true'
         remove-codeql: 'true'
+        remove-haskell: 'true'
         
     - name: Checkout repo
       uses: actions/checkout@v2
