@@ -35,6 +35,11 @@ import (
 	"github.com/pterm/pterm"
 )
 
+type CachedPacket struct {
+	Packet packet.Packet
+	Data   []byte
+}
+
 func EnterReadlineThread(env *environment.PBEnvironment, breaker chan struct{}) {
 	if args.NoReadline {
 		return
@@ -101,74 +106,6 @@ func EnterReadlineThread(env *environment.PBEnvironment, breaker chan struct{}) 
 	}
 }
 
-func onPyRpc(p *packet.PyRpc, env *environment.PBEnvironment) {
-	conn := env.Connection.(*minecraft.Conn)
-	if p.Value == nil {
-		return
-	}
-	go_p_val := p.Value.MakeGo()
-	/*
-		json_val, _:=json.MarshalIndent(go_p_val, "", "\t")
-		fmt.Printf("Received PyRpc: %s\n", json_val)
-	*/
-	if go_p_val == nil {
-		return
-	}
-	pyrpc_val, ok := go_p_val.([]interface{})
-	if !ok || len(pyrpc_val) < 2 {
-		return
-	}
-	command, ok := pyrpc_val[0].(string)
-	if !ok {
-		return
-	}
-	data, ok := pyrpc_val[1].([]interface{})
-	if !ok {
-		return
-	}
-	switch command {
-	case "S2CHeartBeat":
-		conn.WritePacket(&packet.PyRpc{
-			Value: py_rpc.FromGo([]interface{}{
-				"C2SHeartBeat",
-				data,
-				nil,
-			}),
-		})
-	case "GetStartType":
-		client := env.FBAuthClient.(*fbauth.Client)
-		response := client.TransferData(data[0].(string))
-		conn.WritePacket(&packet.PyRpc{
-			Value: py_rpc.FromGo([]interface{}{
-				"SetStartType",
-				[]interface{}{response},
-				nil,
-			}),
-		})
-	case "GetMCPCheckNum":
-		if env.GetCheckNumEverPassed {
-			break
-		}
-		firstArg := data[0].(string)
-		secondArg := (data[1].([]interface{}))[0].(string)
-		client := env.FBAuthClient.(*fbauth.Client)
-		arg, _ := json.Marshal([]interface{}{firstArg, secondArg, env.Connection.(*minecraft.Conn).GameData().EntityUniqueID})
-		ret := client.TransferCheckNum(string(arg))
-		ret_p := []interface{}{}
-		json.Unmarshal([]byte(ret), &ret_p)
-		conn.WritePacket(&packet.PyRpc{
-			Value: py_rpc.FromGo([]interface{}{
-				"SetMCPCheckNum",
-				[]interface{}{
-					ret_p,
-				},
-				nil,
-			}),
-		})
-		env.GetCheckNumEverPassed = true
-	}
-}
-
 func EnterWorkerThread(env *environment.PBEnvironment, breaker chan struct{}) {
 	conn := env.Connection.(*minecraft.Conn)
 	functionHolder := env.FunctionHolder.(*function.FunctionHolder)
@@ -188,9 +125,23 @@ func EnterWorkerThread(env *environment.PBEnvironment, breaker chan struct{}) {
 			}
 		}
 
-		pk, data, err := conn.ReadPacketAndBytes()
-		if err != nil {
-			panic(err)
+		var pk packet.Packet
+		var data []byte
+		var err error
+		if cache := env.CachedPacket.(<-chan CachedPacket); len(cache) > 0 {
+			c := <-cache
+			pk, data = c.Packet, c.Data
+		} else {
+			if pk, data, err = conn.ReadPacketAndBytes(); err != nil {
+				panic(err)
+			}
+			if args.ShouldEnableOmegaSystem && !env.OmegaHasBootstrap {
+				go func() {
+					_, cb := embed.EnableOmegaSystem(env)
+					cb()
+				}()
+				env.OmegaHasBootstrap = true
+			}
 		}
 
 		env.ResourcesUpdater.(func(*packet.Packet))(&pk)
@@ -403,6 +354,7 @@ func EstablishConnectionAndInitEnv(env *environment.PBEnvironment) {
 	}
 
 	env.Connection = conn
+	SolveMCPCheckChallenges(env)
 	pterm.Println(pterm.Yellow(I18n.T(I18n.ConnectionEstablished)))
 
 	env.UQHolder = uqHolder.NewUQHolder(conn.GameData().EntityRuntimeID)
@@ -422,12 +374,6 @@ func EstablishConnectionAndInitEnv(env *environment.PBEnvironment) {
 		Resources: env.Resources.(*ResourcesControl.Resources),
 	}
 
-	if args.ShouldEnableOmegaSystem {
-		_, cb := embed.EnableOmegaSystem(env)
-		go cb()
-		//cb()
-	}
-
 	functionHolder := env.FunctionHolder.(*function.FunctionHolder)
 	function.InitPresetFunctions(functionHolder)
 	fbtask.InitTaskStatusDisplay(env)
@@ -445,6 +391,98 @@ func EstablishConnectionAndInitEnv(env *environment.PBEnvironment) {
 	types.ForwardedBrokSender = taskholder.BrokSender
 
 	env.UQHolder.(*uqHolder.UQHolder).UpdateFromConn(conn)
+}
+
+func onPyRpc(p *packet.PyRpc, env *environment.PBEnvironment) {
+	conn := env.Connection.(*minecraft.Conn)
+	if p.Value == nil {
+		return
+	}
+	go_p_val := p.Value.MakeGo()
+	/*
+		json_val, _:=json.MarshalIndent(go_p_val, "", "\t")
+		fmt.Printf("Received PyRpc: %s\n", json_val)
+	*/
+	if go_p_val == nil {
+		return
+	}
+	pyrpc_val, ok := go_p_val.([]interface{})
+	if !ok || len(pyrpc_val) < 2 {
+		return
+	}
+	command, ok := pyrpc_val[0].(string)
+	if !ok {
+		return
+	}
+	data, ok := pyrpc_val[1].([]interface{})
+	if !ok {
+		return
+	}
+	switch command {
+	case "S2CHeartBeat":
+		conn.WritePacket(&packet.PyRpc{
+			Value: py_rpc.FromGo([]interface{}{
+				"C2SHeartBeat",
+				data,
+				nil,
+			}),
+		})
+	case "GetStartType":
+		client := env.FBAuthClient.(*fbauth.Client)
+		response := client.TransferData(data[0].(string))
+		conn.WritePacket(&packet.PyRpc{
+			Value: py_rpc.FromGo([]interface{}{
+				"SetStartType",
+				[]interface{}{response},
+				nil,
+			}),
+		})
+	case "GetMCPCheckNum":
+		if env.GetCheckNumEverPassed {
+			break
+		}
+		firstArg := data[0].(string)
+		secondArg := (data[1].([]interface{}))[0].(string)
+		client := env.FBAuthClient.(*fbauth.Client)
+		arg, _ := json.Marshal([]interface{}{firstArg, secondArg, env.Connection.(*minecraft.Conn).GameData().EntityUniqueID})
+		ret := client.TransferCheckNum(string(arg))
+		ret_p := []interface{}{}
+		json.Unmarshal([]byte(ret), &ret_p)
+		conn.WritePacket(&packet.PyRpc{
+			Value: py_rpc.FromGo([]interface{}{
+				"SetMCPCheckNum",
+				[]interface{}{
+					ret_p,
+				},
+				nil,
+			}),
+		})
+		env.GetCheckNumEverPassed = true
+	}
+}
+
+func SolveMCPCheckChallenges(env *environment.PBEnvironment) {
+	readPkt := env.Connection.(*minecraft.Conn).ReadPacketAndBytes
+	channel := make(chan CachedPacket, 32767)
+	timer := time.NewTimer(time.Second * 30)
+	for {
+		pk, data, err := readPkt()
+		if err != nil {
+			panic(err)
+		}
+		select {
+		case channel <- CachedPacket{pk, data}:
+			if pyRpcPkt, success := pk.(*packet.PyRpc); success {
+				onPyRpc(pyRpcPkt, env)
+				if env.GetCheckNumEverPassed {
+					env.CachedPacket = (<-chan CachedPacket)(channel)
+					return
+				}
+			}
+		case <-timer.C:
+			panic(fmt.Sprintf("SolveMCPCheckChallenges: Failed to pass the MCPCheck challenges, please try again later"))
+		}
+	}
 }
 
 func getUserInputMD5() (string, error) {

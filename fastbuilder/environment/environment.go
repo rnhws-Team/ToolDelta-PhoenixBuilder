@@ -23,11 +23,13 @@ type PBEnvironment struct {
 	RespondTo                 string
 	Connection                interface{}
 	GetCheckNumEverPassed     bool
+	CachedPacket              interface{}
 	UQHolder                  interface{}
 	Resources                 interface{}
 	ResourcesUpdater          interface{}
 	GameInterface             interfaces.GameInterface
 	TaskHolder                interface{}
+	OmegaHasBootstrap         bool
 	OmegaHolder               interface{}
 	OmegaAdaptorHolder        interface{}
 	ExternalConnectionHandler interface{}
