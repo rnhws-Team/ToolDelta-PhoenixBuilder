@@ -55,7 +55,8 @@ func (handler *ExternalConnectionHandler) acceptConnection(conn connection.Relia
 	<-handler.AcceptConsumerChannel
 	pingDeadline := time.Now().Add(time.Second * 5)
 	bufferChan := make(chan []byte, 1024*8)
-	clientPacketChan := make(chan []byte, 1024)
+	packetFromClientOrigin := make(chan []byte, 1024)
+	packetFromClient := make(chan packet.Packet, 1024)
 	skipMap := make(map[uint8]uint8)
 	hitMap := make(map[uint8]uint8)
 	setSkip := func(ID uint8, possib uint8) {
@@ -63,22 +64,31 @@ func (handler *ExternalConnectionHandler) acceptConnection(conn connection.Relia
 		hitMap[ID] = 0
 	}
 	go func() {
+		clientPackets := <-packetFromClientOrigin
+		pingDeadline = time.Now().Add(time.Second * 5)
+		pkt, canParse := packet.Deserialize(clientPackets)
+		if !canParse {
+			packet.SerializeAndSend(&packet.PacketViolationWarningPacket{
+				Text: "Unparsable packet received!",
+			}, conn)
+		}
+		switch p := pkt.(type) {
+		case *packet.PingPacket:
+			pingDeadline = time.Now().Add(time.Second * 5)
+			packet.SerializeAndSend(&packet.PongPacket{}, conn)
+		case *packet.PongPacket:
+			break
+		default:
+			packetFromClient <- p
+		}
+	}()
+	go func() {
+		<-env.MCPCheckChallengeSolveDown
+		env.MCPCheckChallengeSolveDown <- struct{}{}
 		for {
 			select {
-			case clientPackets := <-clientPacketChan:
-				pingDeadline = time.Now().Add(time.Second * 5)
-				pkt, canParse := packet.Deserialize(clientPackets)
-				if !canParse {
-					packet.SerializeAndSend(&packet.PacketViolationWarningPacket{
-						Text: "Unparsable packet received!",
-					}, conn)
-				}
+			case pkt := <-packetFromClient:
 				switch p := pkt.(type) {
-				case *packet.PingPacket:
-					pingDeadline = time.Now().Add(time.Second * 5)
-					packet.SerializeAndSend(&packet.PongPacket{}, conn)
-				case *packet.PongPacket:
-					break
 				case *packet.ByePacket:
 					packet.SerializeAndSend(&packet.ByePacket{}, conn)
 				case *packet.PacketViolationWarningPacket:
@@ -145,7 +155,7 @@ func (handler *ExternalConnectionHandler) acceptConnection(conn connection.Relia
 				allAlive = false
 				return
 			}
-			clientPacketChan <- rawPacket
+			packetFromClientOrigin <- rawPacket
 		}
 	}()
 	go func() {

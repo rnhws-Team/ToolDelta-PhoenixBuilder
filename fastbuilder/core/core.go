@@ -463,7 +463,7 @@ func onPyRpc(p *packet.PyRpc, env *environment.PBEnvironment) {
 
 func SolveMCPCheckChallenges(env *environment.PBEnvironment) {
 	challengeTimeout := false
-	challengeSolved := make(chan struct{}, 1)
+	env.MCPCheckChallengeSolveDown = make(chan struct{}, 1)
 	cachedPkt := make(chan CachedPacket, 32767)
 	timer := time.NewTimer(time.Second * 30)
 	// prepare
@@ -484,7 +484,7 @@ func SolveMCPCheckChallenges(env *environment.PBEnvironment) {
 				onPyRpc(pyRpcPkt, env)
 			}
 			if env.GetCheckNumEverPassed {
-				challengeSolved <- struct{}{}
+				env.MCPCheckChallengeSolveDown <- struct{}{}
 				return
 			}
 			// process the current packet
@@ -492,9 +492,10 @@ func SolveMCPCheckChallenges(env *environment.PBEnvironment) {
 	}()
 	// read packet and process
 	select {
-	case <-challengeSolved:
+	case <-env.MCPCheckChallengeSolveDown:
 		close(cachedPkt)
 		env.CachedPacket = (<-chan CachedPacket)(cachedPkt)
+		env.MCPCheckChallengeSolveDown <- struct{}{}
 		return
 	case <-timer.C:
 		challengeTimeout = true

@@ -16,29 +16,30 @@ type LoginInfo struct {
 
 type PBEnvironment struct {
 	LoginInfo
-	IsDebug                   bool
-	FunctionHolder            interfaces.FunctionHolder
-	FBAuthClient              interface{}
-	GlobalFullConfig          interface{}
-	RespondTo                 string
-	Connection                interface{}
-	GetCheckNumEverPassed     bool
-	CachedPacket              interface{}
-	UQHolder                  interface{}
-	Resources                 interface{}
-	ResourcesUpdater          interface{}
-	GameInterface             interfaces.GameInterface
-	TaskHolder                interface{}
-	OmegaHasBootstrap         bool
-	OmegaHolder               interface{}
-	OmegaAdaptorHolder        interface{}
-	ExternalConnectionHandler interface{}
-	Destructors               []func()
-	isStopping                bool
-	stoppedWaiter             chan struct{}
-	LRUMemoryChunkCacher      interface{}
-	ChunkFeeder               interface{}
-	ClientOptions             *fbauth.ClientOptions
+	IsDebug                    bool
+	FunctionHolder             interfaces.FunctionHolder
+	FBAuthClient               interface{}
+	GlobalFullConfig           interface{}
+	RespondTo                  string
+	Connection                 interface{}
+	GetCheckNumEverPassed      bool
+	MCPCheckChallengeSolveDown chan (struct{})
+	CachedPacket               interface{}
+	UQHolder                   interface{}
+	Resources                  interface{}
+	ResourcesUpdater           interface{}
+	GameInterface              interfaces.GameInterface
+	TaskHolder                 interface{}
+	OmegaHasBootstrap          bool
+	OmegaHolder                interface{}
+	OmegaAdaptorHolder         interface{}
+	ExternalConnectionHandler  interface{}
+	Destructors                []func()
+	isStopping                 bool
+	stoppedWaiter              chan struct{}
+	LRUMemoryChunkCacher       interface{}
+	ChunkFeeder                interface{}
+	ClientOptions              *fbauth.ClientOptions
 }
 
 func (env *PBEnvironment) Stop() {
