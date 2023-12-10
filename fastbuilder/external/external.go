@@ -109,23 +109,8 @@ func (handler *ExternalConnectionHandler) acceptConnection(conn connection.Relia
 			case *packet.EvalPBCommandPacket:
 				handler.env.FunctionHolder.Process(p.Command)
 			case *packet.GameCommandPacket:
-				if p.CommandType == packet.CommandTypeSettings {
-					env.GameInterface.SendSettingsCommand(p.Command, false)
-					break
-				} else if p.CommandType == packet.CommandTypeNormal {
-					env.Connection.(*minecraft.Conn).WritePacket(
-						&mc_packet.CommandRequest{
-							CommandLine: p.Command,
-							CommandOrigin: protocol.CommandOrigin{
-								Origin:    protocol.CommandOriginAutomationPlayer,
-								UUID:      p.UUID,
-								RequestID: "96045347-a6a3-4114-94c0-1bc4cc561694",
-							},
-							Internal:  false,
-							UnLimited: false,
-						},
-					)
-				} else {
+				switch p.CommandType {
+				case packet.CommandTypeNormal:
 					env.Connection.(*minecraft.Conn).WritePacket(
 						&mc_packet.CommandRequest{
 							CommandLine: p.Command,
@@ -138,6 +123,21 @@ func (handler *ExternalConnectionHandler) acceptConnection(conn connection.Relia
 							UnLimited: false,
 						},
 					)
+				case packet.CommandTypeWebsocket:
+					env.Connection.(*minecraft.Conn).WritePacket(
+						&mc_packet.CommandRequest{
+							CommandLine: p.Command,
+							CommandOrigin: protocol.CommandOrigin{
+								Origin:    protocol.CommandOriginAutomationPlayer,
+								UUID:      p.UUID,
+								RequestID: "96045347-a6a3-4114-94c0-1bc4cc561694",
+							},
+							Internal:  false,
+							UnLimited: false,
+						},
+					)
+				case packet.CommandTypeSettings:
+					env.GameInterface.SendSettingsCommand(p.Command, false)
 				}
 			case *packet.GamePacket:
 				(env.Connection).(*minecraft.Conn).Write(p.Content)
