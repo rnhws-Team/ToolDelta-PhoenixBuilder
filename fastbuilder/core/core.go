@@ -368,6 +368,7 @@ func EstablishConnectionAndInitEnv(env *environment.PBEnvironment) {
 		env.ClientOptions.RespondUserOverride = args.CustomGameName
 		env.FBAuthClient = fbauth.CreateClient(env.ClientOptions)
 	}
+	env.MCPCheckChallengeSolveDown = make(chan struct{}, 1)
 	pterm.Println(pterm.Yellow(fmt.Sprintf("%s: %s", I18n.T(I18n.ServerCodeTrans), env.LoginInfo.ServerCode)))
 
 	if args.ExternalListenAddress != "" {
@@ -509,10 +510,40 @@ func onPyRpc(p *packet.PyRpc, env *environment.PBEnvironment) {
 	}
 }
 
+func WaitMCPCheckChallengesDown(
+	env *environment.PBEnvironment,
+	command_output chan packet.CommandOutput,
+) {
+	ticker := time.NewTicker(time.Millisecond * 50)
+	defer ticker.Stop()
+	for {
+		err := env.Connection.(*minecraft.Conn).WritePacket(&packet.CommandRequest{
+			CommandLine: "WaitMCPCheckChallengesDown",
+			CommandOrigin: protocol.CommandOrigin{
+				Origin:    protocol.CommandOriginAutomationPlayer,
+				UUID:      ResourcesControl.GenerateUUID(),
+				RequestID: "96045347-a6a3-4114-94c0-1bc4cc561694",
+			},
+			Internal:  false,
+			UnLimited: false,
+		})
+		if err != nil {
+			panic(fmt.Sprintf("WaitMCPCheckChallengesDown: %v", err))
+		}
+		if len(command_output) > 0 {
+			<-command_output
+			close(command_output)
+			break
+		}
+		<-ticker.C
+	}
+}
+
 func SolveMCPCheckChallenges(env *environment.PBEnvironment) {
 	challengeTimeout := false
-	env.MCPCheckChallengeSolveDown = make(chan struct{}, 1)
+	challengeSolved := make(chan struct{}, 1)
 	cachedPkt := make(chan CachedPacket, 32767)
+	commandOutput := make(chan packet.CommandOutput, 1)
 	timer := time.NewTimer(time.Second * 30)
 	// prepare
 	go func() {
@@ -528,22 +559,27 @@ func SolveMCPCheckChallenges(env *environment.PBEnvironment) {
 			// read packet
 			cachedPkt <- CachedPacket{pk, data}
 			// cache the current packet
-			if pyRpcPkt, success := pk.(*packet.PyRpc); success {
-				onPyRpc(pyRpcPkt, env)
-			}
-			if env.GetCheckNumEverPassed {
-				env.MCPCheckChallengeSolveDown <- struct{}{}
+			switch p := pk.(type) {
+			case *packet.PyRpc:
+				onPyRpc(p, env)
+			case *packet.CommandOutput:
+				commandOutput <- *p
 				return
+			}
+			if len(challengeSolved) == 0 && env.GetCheckNumEverPassed {
+				challengeSolved <- struct{}{}
 			}
 			// process the current packet
 		}
 	}()
 	// read packet and process
 	select {
-	case <-env.MCPCheckChallengeSolveDown:
+	case <-challengeSolved:
+		WaitMCPCheckChallengesDown(env, commandOutput)
+		env.MCPCheckChallengeSolveDown <- struct{}{}
+		close(challengeSolved)
 		close(cachedPkt)
 		env.CachedPacket = (<-chan CachedPacket)(cachedPkt)
-		env.MCPCheckChallengeSolveDown <- struct{}{}
 		return
 	case <-timer.C:
 		challengeTimeout = true
