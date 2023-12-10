@@ -64,78 +64,30 @@ func (handler *ExternalConnectionHandler) acceptConnection(conn connection.Relia
 		hitMap[ID] = 0
 	}
 	go func() {
-		clientPackets := <-packetFromClientOrigin
-		pingDeadline = time.Now().Add(time.Second * 5)
-		pkt, canParse := packet.Deserialize(clientPackets)
-		if !canParse {
-			packet.SerializeAndSend(&packet.PacketViolationWarningPacket{
-				Text: "Unparsable packet received!",
-			}, conn)
-		}
-		switch p := pkt.(type) {
-		case *packet.PingPacket:
-			pingDeadline = time.Now().Add(time.Second * 5)
-			packet.SerializeAndSend(&packet.PongPacket{}, conn)
-		case *packet.PongPacket:
-			break
-		default:
-			packetFromClient <- p
-		}
-	}()
-	go func() {
-		<-env.MCPCheckChallengeSolveDown
-		env.MCPCheckChallengeSolveDown <- struct{}{}
 		for {
 			select {
-			case pkt := <-packetFromClient:
+			case clientPackets := <-packetFromClientOrigin:
+				pingDeadline = time.Now().Add(time.Second * 5)
+				pkt, canParse := packet.Deserialize(clientPackets)
+				if !canParse {
+					packet.SerializeAndSend(&packet.PacketViolationWarningPacket{
+						Text: "Unparsable packet received!",
+					}, conn)
+				}
 				switch p := pkt.(type) {
+				case *packet.PingPacket:
+					pingDeadline = time.Now().Add(time.Second * 5)
+					packet.SerializeAndSend(&packet.PongPacket{}, conn)
+				case *packet.PongPacket:
+					break
 				case *packet.ByePacket:
 					packet.SerializeAndSend(&packet.ByePacket{}, conn)
 				case *packet.PacketViolationWarningPacket:
 					break
-				case *packet.EvalPBCommandPacket:
-					handler.env.FunctionHolder.Process(p.Command)
-				case *packet.GameCommandPacket:
-					if p.CommandType == packet.CommandTypeSettings {
-						env.GameInterface.SendSettingsCommand(p.Command, false)
-						break
-					} else if p.CommandType == packet.CommandTypeNormal {
-						env.Connection.(*minecraft.Conn).WritePacket(
-							&mc_packet.CommandRequest{
-								CommandLine: p.Command,
-								CommandOrigin: protocol.CommandOrigin{
-									Origin:    protocol.CommandOriginAutomationPlayer,
-									UUID:      p.UUID,
-									RequestID: "96045347-a6a3-4114-94c0-1bc4cc561694",
-								},
-								Internal:  false,
-								UnLimited: false,
-							},
-						)
-					} else {
-						env.Connection.(*minecraft.Conn).WritePacket(
-							&mc_packet.CommandRequest{
-								CommandLine: p.Command,
-								CommandOrigin: protocol.CommandOrigin{
-									Origin:    protocol.CommandOriginPlayer,
-									UUID:      p.UUID,
-									RequestID: "96045347-a6a3-4114-94c0-1bc4cc561694",
-								},
-								Internal:  false,
-								UnLimited: false,
-							},
-						)
-					}
-				case *packet.GamePacket:
-					(env.Connection).(*minecraft.Conn).Write(p.Content)
 				case *packet.GamePacketReducePacket:
 					setSkip(p.PacketID, p.DropBy)
-				case *packet.UQHolderRequestPacket:
-					//q:=string(p.QueryString)
-					//if q=="*"
-					packet.SerializeAndSend(&packet.UQHolderResponsePacket{
-						Content: (env.UQHolder).(*uqHolder.UQHolder).Marshal(),
-					}, conn)
+				default:
+					packetFromClient <- p
 				}
 			case gamePacket := <-bufferChan:
 				if !allAlive {
@@ -144,6 +96,56 @@ func (handler *ExternalConnectionHandler) acceptConnection(conn connection.Relia
 				// fmt.Println("send: ", gamePacket[0])
 				packet.SerializeAndSend(&packet.GamePacket{
 					Content: gamePacket,
+				}, conn)
+			}
+		}
+	}()
+	go func() {
+		<-env.MCPCheckChallengeSolveDown
+		env.MCPCheckChallengeSolveDown <- struct{}{}
+		for {
+			pkt := <-packetFromClient
+			switch p := pkt.(type) {
+			case *packet.EvalPBCommandPacket:
+				handler.env.FunctionHolder.Process(p.Command)
+			case *packet.GameCommandPacket:
+				if p.CommandType == packet.CommandTypeSettings {
+					env.GameInterface.SendSettingsCommand(p.Command, false)
+					break
+				} else if p.CommandType == packet.CommandTypeNormal {
+					env.Connection.(*minecraft.Conn).WritePacket(
+						&mc_packet.CommandRequest{
+							CommandLine: p.Command,
+							CommandOrigin: protocol.CommandOrigin{
+								Origin:    protocol.CommandOriginAutomationPlayer,
+								UUID:      p.UUID,
+								RequestID: "96045347-a6a3-4114-94c0-1bc4cc561694",
+							},
+							Internal:  false,
+							UnLimited: false,
+						},
+					)
+				} else {
+					env.Connection.(*minecraft.Conn).WritePacket(
+						&mc_packet.CommandRequest{
+							CommandLine: p.Command,
+							CommandOrigin: protocol.CommandOrigin{
+								Origin:    protocol.CommandOriginPlayer,
+								UUID:      p.UUID,
+								RequestID: "96045347-a6a3-4114-94c0-1bc4cc561694",
+							},
+							Internal:  false,
+							UnLimited: false,
+						},
+					)
+				}
+			case *packet.GamePacket:
+				(env.Connection).(*minecraft.Conn).Write(p.Content)
+			case *packet.UQHolderRequestPacket:
+				//q:=string(p.QueryString)
+				//if q=="*"
+				packet.SerializeAndSend(&packet.UQHolderResponsePacket{
+					Content: (env.UQHolder).(*uqHolder.UQHolder).Marshal(),
 				}, conn)
 			}
 		}
