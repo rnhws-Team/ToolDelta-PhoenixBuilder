@@ -50,6 +50,7 @@ require (
 	github.com/pterm/pterm v0.12.29
 	github.com/sandertv/go-raknet v1.12.0
 	github.com/xtaci/kcp-go/v5 v5.6.1
+	go.etcd.io/bbolt v1.3.8
 	go.uber.org/atomic v1.9.0
 	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/net v0.7.0
