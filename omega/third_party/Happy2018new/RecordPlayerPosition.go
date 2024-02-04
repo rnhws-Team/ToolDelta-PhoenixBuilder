@@ -10,6 +10,7 @@ import (
 	GameInterface "phoenixbuilder/game_control/game_interface"
 	ResourcesControl "phoenixbuilder/game_control/resources_control"
 	"phoenixbuilder/omega/defines"
+	"strconv"
 	"sync"
 	"time"
 
@@ -400,6 +401,11 @@ func (o *RecordPlayerPosition) ReceiveResponse() error {
 			if err != nil {
 				return fmt.Errorf("ReceiveResponse: %v", err)
 			}
+			temp, _ := strconv.ParseFloat(
+				strconv.FormatFloat(float64(value.Position[2]), 'f', 5, 32),
+				32,
+			)
+			value.Position[2] = float32(temp) - 1.62001
 			o.LogPassingChan <- SingleLog{
 				Time: time.Now(),
 				PlayerName: o.Frame.GetGameControl().GetPlayerKitByUUID(
