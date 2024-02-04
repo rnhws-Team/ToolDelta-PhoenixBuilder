@@ -2,11 +2,13 @@ package DB
 
 import (
 	"fmt"
+	Mapping "phoenixbuilder/fastbuilder/database/mapping"
+	"sync"
 )
 
 // 刷新存储桶中对已有键的统计结果
 func (b *Bucket) RefreshMapping() {
-	b.mapping.Init()
+	b.mapping.Reset()
 	b.b.ForEach(func(k, v []byte) error {
 		b.mapping.Put(k)
 		return nil
@@ -57,6 +59,7 @@ func (b *Bucket) CreateSubBucket(name []byte) error {
 	if err != nil {
 		return fmt.Errorf("CreateSubBucket: %v", err)
 	}
+	b.mapping.Put(name)
 	return nil
 }
 
@@ -66,20 +69,29 @@ func (b *Bucket) DeleteSubBucket(name []byte) error {
 	if err != nil {
 		return fmt.Errorf("CreateSubBucket: %v", err)
 	}
+	b.mapping.Delete(name)
 	return nil
 }
 
 // 从该存储桶取得名为 name 的子存储桶。
-// 此后，在进行任何与所获子桶无关的操作前须关闭子桶，
-// 否则这些新增的操作都将被阻塞，
-// 直到被(强制)释放
+// 你可以同时打开若干个子存储桶，
+// 它们互相独立，可以同时操作。
+// 在子存储桶使用完毕后，
+// 你必须将其释放，否则可能会造成阻塞
 func (b *Bucket) GetSubBucketByName(name []byte) (result *Bucket) {
 	b.subBucket.Add(1)
 	sub_bucket_got := make(chan struct{}, 1)
 	sub_bucket_use_down := make(chan struct{}, 1)
 	// prepare
 	go func() {
-		result = &Bucket{b: b.b.Bucket(name), use_down: sub_bucket_use_down}
+		result = &Bucket{
+			b:         b.b.Bucket(name),
+			mapping:   Mapping.GetNewMapping(),
+			terminate: make(chan struct{}, 1),
+			subBucket: &sync.WaitGroup{},
+			use_down:  sub_bucket_use_down,
+		}
+		result.RefreshMapping()
 		sub_bucket_got <- struct{}{}
 		select {
 		case <-sub_bucket_use_down:
@@ -113,7 +125,7 @@ func (b *Bucket) UseDown() error {
 	b.subBucket.Wait()
 	// 等待所有已打开的子存储桶被关闭
 	b.b = nil
-	b.mapping.Init()
+	b.mapping.Reset()
 	// 释放当前存储桶
 	b.use_down <- struct{}{}
 	close(b.use_down)

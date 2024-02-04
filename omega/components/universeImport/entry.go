@@ -410,7 +410,8 @@ func (o *UniverseImport) onGetCalled(cmds []string) (stop bool) {
 			pterm.Error.Printfln("无法获取名为 %v 目标的坐标, 请检查 %v 是否在服务器或者考虑调整设置, %v", target, target, err)
 		} else {
 			result := results[0]
-			result.Position.Y -= 1.62001001834869
+			strconv.FormatFloat(result.Position.Y, 'f', 5, 64)
+			result.Position.Y -= 1.62001
 			o.PosInferredByGet = &define.CubePos{int(math.Floor(result.Position.X)), int(math.Floor(result.Position.Y)), int(math.Floor(result.Position.Z))}
 			pterm.Info.Printfln("已经获得 %v 所在坐标 %v, 后续使用 load 指令时可以省略 [x] [y] [z]", target, o.PosInferredByGet)
 		}
