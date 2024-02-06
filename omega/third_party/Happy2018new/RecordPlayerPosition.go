@@ -144,8 +144,7 @@ func (o *RecordPlayerPosition) CreateAndGetBucket(log *SingleLog) (
 	// 初始化
 	{
 		year, months, day := log.Time.Date()
-		datetime := time.Time{}
-		datetime = datetime.AddDate(year, int(months), day)
+		datetime := time.Date(year, months, day, 0, 0, 0, 0, time.Local)
 		// 截取日志创建的日期
 		// 该日期的时间戳将作为根存储桶的名称
 		buffer := bytes.NewBuffer([]byte{})
@@ -289,8 +288,8 @@ func (o *RecordPlayerPosition) RecordSingleLog(
 	// 将 log.Pos 和 log.Time 编码为二进制形式
 	sum_counts_bytes := player.GetDataByKey([]byte("pos_change_details_sum_counts"))
 	if sum_counts_bytes == nil {
-		player.PutData([]byte("pos_change_details_sum_counts"), []byte{0, 0, 0, 0, 0, 0, 0, 1})
-		sum_counts_bytes = []byte{0, 0, 0, 0, 0, 0, 0, 1}
+		player.PutData([]byte("pos_change_details_sum_counts"), make([]byte, 8))
+		sum_counts_bytes = make([]byte, 8)
 	}
 	reader := bytes.NewBuffer(sum_counts_bytes)
 	if err = binary.Read(reader, binary.LittleEndian, &sum_counts); err != nil {
@@ -438,7 +437,7 @@ func (o *RecordPlayerPosition) Init(
 		panic(err)
 	}
 	if o.DatabaseName == "" {
-		o.DatabaseName = "PlayerLocation"
+		o.DatabaseName = "PlayerLocation.db"
 	}
 	o.LogPassingChan = make(chan SingleLog, 64)
 	o.Stoped = make(chan struct{}, 1)
